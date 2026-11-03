@@ -2,13 +2,28 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- スマホで勝手にズームやスクロールしないように完全固定 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>絵文字ドロップ！ (EMOJI DROP)</title>
+
+    <!-- ▼▼▼ SNSカード（OGP）設定 ▼▼▼ -->
+    <meta property="og:title" content="絵文字ドロップ！ (EMOJI DROP)">
+    <meta property="og:description" content="同じ絵文字をくっつけて進化させよう！社畜モードと動物園モードが遊べるブラウザパズルゲーム！">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://koyokunosumi.github.io/emodrop/">
+    <meta property="og:image" content="https://koyokunosumi.github.io/emodrop/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <!-- ▲▲▲ SNSカード（OGP）設定 ▲▲▲ -->
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        body {
+        /* スマホでのバウンススクロールや長押し選択を完全に防止 */
+        html, body {
             margin: 0;
-            padding: 10px;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             background: #1a1a1a;
             color: #fff;
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -16,25 +31,25 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: none;
         }
         h1 {
-            margin: 5px 0;
-            font-size: 20px;
+            margin: 2px 0;
+            font-size: 18px;
         }
         #header-info {
-            width: 360px;
+            width: 340px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             background: #2a2a2a;
-            padding: 6px 12px;
+            padding: 6px 10px;
             border-radius: 8px;
             border: 2px solid #444;
             box-sizing: border-box;
@@ -43,8 +58,8 @@
             background: #555;
             color: #fff;
             border: none;
-            padding: 4px 8px;
-            font-size: 12px;
+            padding: 4px 6px;
+            font-size: 11px;
             border-radius: 4px;
             cursor: pointer;
             transition: 0.2s;
@@ -54,18 +69,21 @@
         }
         #game-container {
             position: relative;
-            width: 360px;
-            height: 500px;
+            width: 340px;
+            height: 480px;
             background: #2a2a2a;
             border: 4px solid #444;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            touch-action: none;
+            touch-action: none; /* スマホでのスクロールをブロック */
+        }
+        canvas {
+            display: block;
         }
         #drop-preview {
             position: absolute;
-            top: 20px;
+            top: 15px;
             transform: translateX(-50%);
             pointer-events: none;
             display: none;
@@ -83,14 +101,14 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 10;
             text-align: center;
-            padding: 20px;
+            padding: 15px;
             box-sizing: border-box;
         }
         .hidden {
@@ -101,31 +119,28 @@
             color: white;
             border: none;
             padding: 10px 20px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
-            margin: 8px;
+            margin: 5px;
             box-shadow: 0 4px 10px rgba(255,87,34,0.4);
             transition: 0.2s;
+            -webkit-tap-highlight-color: transparent;
         }
-        button:hover {
-            background: #f4511e;
-            transform: scale(1.05);
+        button:active {
+            transform: scale(0.95);
         }
         .mode-btn {
             background: #3f51b5;
             box-shadow: 0 4px 10px rgba(63,81,181,0.4);
         }
-        .mode-btn:hover {
-            background: #303f9f;
-        }
         .result-box {
             background: #333;
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
-            margin: 10px 0;
-            max-height: 150px;
+            margin: 6px 0;
+            max-height: 120px;
             overflow-y: auto;
             width: 100%;
         }
@@ -133,8 +148,9 @@
             background: #1da1f2;
             box-shadow: 0 4px 10px rgba(29,161,242,0.4);
         }
-        .share-btn:hover {
-            background: #0c85d0;
+        .copy-btn {
+            background: #4caf50;
+            box-shadow: 0 4px 10px rgba(76,175,80,0.4);
         }
     </style>
 </head>
@@ -143,7 +159,7 @@
     <div id="header-info">
         <span id="current-mode-label">社畜</span>
         <span>スコア: <span id="score">0</span></span>
-        <span>次: <span id="next-display" style="font-size:16px;">📌</span></span>
+        <span>次: <span id="next-display" style="font-size:15px;">📌</span></span>
         <button class="giveup-btn" onclick="triggerGameOver()">🏳️ ギブアップ</button>
     </div>
 
@@ -152,21 +168,24 @@
 
         <div id="title-screen" class="screen">
             <h1>📦 絵文字ドロップ！</h1>
-            <p style="font-size: 14px; margin-bottom: 20px;">同じ絵文字をくっつけて進化させよう！</p>
+            <p style="font-size: 13px; margin-bottom: 15px;">同じ絵文字をくっつけて進化させよう！</p>
             <button class="mode-btn" onclick="startGame('office')">🖨️ 社畜モード (オフィス)</button>
             <button class="mode-btn" onclick="startGame('animal')">🦁 動物園モード (動物)</button>
         </div>
 
         <div id="gameover-screen" class="screen hidden">
-            <h1 style="color: #ff5722; margin: 0 0 10px 0;">GAME OVER</h1>
-            <p style="margin: 5px 0;">スコア: <span id="final-score" style="font-weight:bold; font-size:20px;">0</span></p>
+            <h1 style="color: #ff5722; margin: 0 0 5px 0; font-size: 22px;">GAME OVER</h1>
+            <p style="margin: 2px 0; font-size: 14px;">スコア: <span id="final-score" style="font-weight:bold; font-size:18px;">0</span></p>
             <div class="result-box">
-                <p id="result-title" style="margin:0 0 5px 0; font-weight:bold; font-size:14px;"></p>
-                <div id="result-items" style="font-size: 22px; line-height: 1.4;"></div>
+                <p id="result-title" style="margin:0 0 3px 0; font-weight:bold; font-size:12px;"></p>
+                <div id="result-items" style="font-size: 18px; line-height: 1.3;"></div>
             </div>
             <button onclick="restartGame()">🔄 もう一度遊ぶ</button>
-            <button class="share-btn" onclick="shareToX()">🐦 Xで結果をシェア</button>
-            <button style="background:#555; padding:6px 14px; font-size:12px;" onclick="returnToTitle()">タイトルに戻る</button>
+            <div style="display: flex; gap: 5px; justify-content: center; width: 100%;">
+                <button class="share-btn" style="flex: 1; padding: 7px 5px; font-size: 13px;" onclick="shareToX()">🐦 Xでシェア</button>
+                <button class="copy-btn" style="flex: 1; padding: 7px 5px; font-size: 13px;" onclick="copyCardText()">📋 カードコピー</button>
+            </div>
+            <button style="background:#555; padding:5px 10px; font-size:11px; margin-top:3px;" onclick="returnToTitle()">タイトルに戻る</button>
         </div>
     </div>
 
@@ -176,33 +195,33 @@
             name: "社畜",
             titleText: "☕ 今日のあなたのオフィスデスク：",
             items: [
-                { emoji: '📌', radius: 15, score: 2 },
-                { emoji: '✏️', radius: 22, score: 4 },
-                { emoji: '✂️', radius: 30, score: 8 },
-                { emoji: '📏', radius: 38, score: 16 },
-                { emoji: '🔋', radius: 46, score: 32 },
-                { emoji: '💾', radius: 54, score: 64 },
-                { emoji: '☕', radius: 62, score: 128 },
-                { emoji: '💻', radius: 72, score: 256 },
-                { emoji: '🖨️', radius: 82, score: 512 } // 最大
+                { emoji: '📌', radius: 14, score: 2 },
+                { emoji: '✏️', radius: 20, score: 4 },
+                { emoji: '✂️', radius: 27, score: 8 },
+                { emoji: '📏', radius: 34, score: 16 },
+                { emoji: '🔋', radius: 42, score: 32 },
+                { emoji: '💾', radius: 50, score: 64 },
+                { emoji: '☕', radius: 58, score: 128 },
+                { emoji: '💻', radius: 66, score: 256 },
+                { emoji: '🖨️', radius: 76, score: 512 }
             ],
-            obamaItem: { emoji: '💥', radius: 50, score: 0, isObstacle: true }
+            obamaItem: { emoji: '💥', radius: 45, score: 0, isObstacle: true }
         },
         animal: {
             name: "動物園",
             titleText: "🌴 今日のあなたの動物園：",
             items: [
-                { emoji: '🐜', radius: 15, score: 2 },
-                { emoji: '🐛', radius: 22, score: 4 },
-                { emoji: '🐌', radius: 30, score: 8 },
-                { emoji: '🐸', radius: 38, score: 16 },
-                { emoji: '🐰', radius: 46, score: 32 },
-                { emoji: '🐱', radius: 54, score: 64 },
-                { emoji: '🐶', radius: 62, score: 128 },
-                { emoji: '🦁', radius: 72, score: 256 },
-                { emoji: '🐘', radius: 82, score: 512 } // 最大
+                { emoji: '🐜', radius: 14, score: 2 },
+                { emoji: '🐛', radius: 20, score: 4 },
+                { emoji: '🐌', radius: 27, score: 8 },
+                { emoji: '🐸', radius: 34, score: 16 },
+                { emoji: '🐰', radius: 42, score: 32 },
+                { emoji: '🐱', radius: 50, score: 64 },
+                { emoji: '🐶', radius: 58, score: 128 },
+                { emoji: '🦁', radius: 66, score: 256 },
+                { emoji: '🐘', radius: 76, score: 512 }
             ],
-            obamaItem: { emoji: '💩', radius: 50, score: 0, isObstacle: true }
+            obamaItem: { emoji: '💩', radius: 45, score: 0, isObstacle: true }
         }
     };
 
@@ -213,15 +232,15 @@
     let nextEmojiIndex = 0;
     let isDragging = false;
     let canDrop = true;
-    let dropX = 180;
+    let dropX = 170;
 
     const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
     let engine, render, runner;
     const container = document.getElementById('game-container');
     const previewEl = document.getElementById('drop-preview');
-    const WIDTH = 360;
-    const HEIGHT = 500;
-    const DEAD_LINE = 65;
+    const WIDTH = 340;
+    const HEIGHT = 480;
+    const DEAD_LINE = 60;
 
     function cleanupPhysics() {
         if (render) {
@@ -458,7 +477,7 @@
         canDrop = false;
         previewEl.style.display = 'none';
 
-        createEmojiBody(dropX, 40, currentEmojiIndex, true);
+        createEmojiBody(dropX, 35, currentEmojiIndex, true);
 
         setTimeout(() => {
             if (gameActive) spawnNext();
@@ -477,6 +496,7 @@
         previewEl.style.left = `${x}px`;
     }
 
+    // マウス・タッチイベントの共通化
     container.addEventListener('mousedown', (e) => handlePointerStart(e.clientX));
     window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX));
     window.addEventListener('mouseup', () => handlePointerEnd());
@@ -492,6 +512,39 @@
         handlePointerEnd();
     });
 
+    function generateResultCardText() {
+        const modeName = MODES[currentMode].name;
+        const bodies = Composite.allBodies(engine.world);
+        const counts = {};
+        const items = MODES[currentMode].items;
+        const maxIdx = items.length - 1;
+
+        bodies.forEach(b => {
+            if (b.emojiIndex !== undefined) {
+                const idx = b.emojiIndex;
+                counts[idx] = (counts[idx] || 0) + 1;
+            } else if (b.isObstacle) {
+                counts[maxIdx] = (counts[maxIdx] || 0) + 2;
+            }
+        });
+
+        let itemsStr = "";
+        for (let i = items.length - 1; i >= 0; i--) {
+            if (counts[i]) {
+                itemsStr += `${items[i].emoji}×${counts[i]}  `;
+            }
+        }
+        if (itemsStr === "") itemsStr = "なし";
+
+        return `┌──────────────────────┐\n` +
+               `📦 【絵文字ドロップ (${modeName})】\n` +
+               `🏆 スコア: ${score} 点\n` +
+               `----------------------\n` +
+               `📊 成果:\n${itemsStr}\n` +
+               `└──────────────────────┘\n` +
+               `#絵文字ドロップ #EMOJIDROP`;
+    }
+
     function triggerGameOver() {
         if (!gameActive) return;
         gameActive = false;
@@ -499,7 +552,7 @@
         previewEl.style.display = 'none';
 
         document.getElementById('final-score').innerText = score;
-        document.getElementById('result-title').innerText = MODES[currentMode].titleText;
+        document.getElementById('result-title').innerText = MODES[currentMode].text || "結果発表：";
 
         const bodies = Composite.allBodies(engine.world);
         const counts = {};
@@ -528,9 +581,18 @@
     }
 
     function shareToX() {
-        const modeName = MODES[currentMode].name;
-        const text = encodeURIComponent(`【絵文字ドロップ (${modeName}モード)】\nスコア: ${score}点でした！\n#絵文字スイカゲーム #EMOJIDROP`);
+        const cardText = generateResultCardText();
+        const text = encodeURIComponent(cardText);
         window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+    }
+
+    function copyCardText() {
+        const cardText = generateResultCardText();
+        navigator.clipboard.writeText(cardText).then(() => {
+            alert("リザルトカードをコピーしました！");
+        }).catch(err => {
+            alert("コピーに失敗しました…");
+        });
     }
 </script>
 
