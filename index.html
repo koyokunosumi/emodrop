@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>絵文字ドロップ (EMOJI DROP)</title>
+    <title>絵文字ドロップ！ (EMOJI DROP)</title>
 
     <meta property="og:title" content="絵文字ドロップ (EMOJI DROP)">
     <meta property="og:description" content="同じ絵文字をくっつけて進化させるブラウザパズルゲーム！">
@@ -108,6 +108,7 @@
             text-align: center;
             padding: 10px;
             box-sizing: border-box;
+            overflow-y: auto;
         }
         .hidden {
             display: none !important;
@@ -132,17 +133,17 @@
             padding: 4px 8px;
             border-radius: 8px;
             margin: 4px 0;
-            max-height: 80px;
+            max-height: 75px;
             overflow-y: auto;
             width: 100%;
             box-sizing: border-box;
         }
 
-        /* リザルト画面のボタン群（絶対に消えない独立したクラス） */
+        /* リザルト画面のボタン群（確実に表示される独立デザイン） */
         .result-btn {
             display: block;
             width: 80%;
-            margin: 5px auto;
+            margin: 4px auto;
             padding: 9px 12px;
             font-size: 14px;
             font-weight: bold;
@@ -177,7 +178,7 @@
 <body>
 
     <div id="header-info">
-        <span id="current-mode-label"></span>
+        <span id="current-mode-label">社畜</span>
         <span>スコア: <span id="score">0</span></span>
         <span>次: <span id="next-display" style="font-size:15px;">📌</span></span>
         <button id="btn-giveup" class="giveup-btn">🏳️ ギブアップ</button>
@@ -188,11 +189,12 @@
 
         <div id="title-screen" class="screen">
             <h1>📦 絵文字ドロップ</h1>
-            <p style="font-size: 13px; margin-bottom: 20px;">同じ絵文字をくっつけて進化させよう</p>
+            <p style="font-size: 13px; margin-bottom: 20px;">同じ絵文字をくっつけて進化</p>
             <button id="btn-office" class="mode-btn">🖨️ 会社モード (オフィス)</button>
             <button id="btn-animal" class="mode-btn">🦁 動物園モード (動物)</button>
         </div>
 
+        <!-- ▼▼▼ ゲームオーバー画面（シェアボタンを確実に配置） ▼▼▼ -->
         <div id="gameover-screen" class="screen hidden">
             <h1 style="color: #ff5722; margin: 0 0 2px 0; font-size: 18px;">GAME OVER</h1>
             <p style="margin: 2px 0; font-size: 12px;">スコア: <span id="final-score" style="font-weight:bold; font-size:16px;">0</span></p>
@@ -201,11 +203,12 @@
                 <div id="result-items" style="font-size: 15px; line-height: 1.2;"></div>
             </div>
             
-            <!-- 確実に存在して消えないリザルトボタン群 -->
+            <!-- リザルトボタン3種（もう一度遊ぶ・シェア・タイトル） -->
             <button id="btn-restart" class="result-btn restart-btn">🔄 もう一度遊ぶ</button>
             <button id="btn-share" class="result-btn share-btn">🐦 Xで結果をシェア</button>
             <button id="btn-title" class="result-btn title-back-btn">タイトルに戻る</button>
         </div>
+        <!-- ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ -->
     </div>
 
 <script>
@@ -556,7 +559,7 @@
     bindButton('btn-restart', () => restartGame());
     bindButton('btn-title', () => returnToTitle());
     
-    // シェアボタンのクリック/タッチイベント
+    // シェアボタンのイベント登録
     bindButton('btn-share', () => {
         const modeName = MODES[currentMode].name;
         const bodies = Matter.Composite.allBodies(engine.world);
