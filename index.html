@@ -5,15 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>絵文字ドロップ！ (EMOJI DROP)</title>
 
-    <!-- ▼▼▼ SNSカード（OGP）設定 ▼▼▼ -->
     <meta property="og:title" content="絵文字ドロップ！ (EMOJI DROP)">
-    <meta property="og:description" content="同じ絵文字をくっつけて進化させよう！社畜モードと動物園モードが遊べるブラウザパズルゲーム！">
+    <meta property="og:description" content="同じ絵文字をくっつけて進化るブラウザパズルゲーム">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://koyokunosumi.github.io/emodrop/">
     <meta property="og:image" content="https://koyokunosumi.github.io/emodrop/thumbnail.png">
     <meta name="twitter:card" content="summary_large_image">
-    <!-- ▲▲▲ SNSカード（OGP）設定 ▲▲▲ -->
-
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
@@ -128,7 +125,6 @@
             -webkit-tap-highlight-color: transparent;
             z-index: 25;
             position: relative;
-            /* タッチの邪魔をしないよう確実に設定 */
             touch-action: manipulation;
         }
         button:active {
@@ -237,8 +233,7 @@
     let canDrop = true;
     let dropX = 170;
 
-    const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
-    let engine, render, runner;
+    let engine = null, render = null, runner = null;
     const container = document.getElementById('game-container');
     const previewEl = document.getElementById('drop-preview');
     const WIDTH = 340;
@@ -246,17 +241,21 @@
     const DEAD_LINE = 60;
 
     function cleanupPhysics() {
-        if (render) {
-            Render.stop(render);
-            if (render.canvas) render.canvas.remove();
-            render.canvas = null;
-            render.context = null;
-            render.textures = {};
-        }
-        if (runner) Runner.stop(runner);
-        if (engine) {
-            Composite.clear(engine.world, false);
-            Engine.clear(engine);
+        try {
+            if (render) {
+                Matter.Render.stop(render);
+                if (render.canvas) render.canvas.remove();
+                render.canvas = null;
+                render.context = null;
+                render.textures = {};
+            }
+            if (runner) Matter.Runner.stop(runner);
+            if (engine) {
+                Matter.Composite.clear(engine.world, false);
+                Matter.Engine.clear(engine);
+            }
+        } catch (e) {
+            console.error("Cleanup error:", e);
         }
         engine = null;
         render = null;
@@ -264,10 +263,12 @@
     }
 
     function startGame(modeKey) {
-        cleanupPhysics();
-        currentMode = modeKey;
+        // 最初に確実に画面を隠す
         document.getElementById('title-screen').classList.add('hidden');
         document.getElementById('gameover-screen').classList.add('hidden');
+
+        cleanupPhysics();
+        currentMode = modeKey;
         document.getElementById('current-mode-label').innerText = MODES[modeKey].name;
         
         score = 0;
@@ -293,6 +294,8 @@
     }
 
     function initPhysics() {
+        const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
+
         engine = Engine.create();
         render = Render.create({
             element: container,
@@ -387,7 +390,7 @@
     function createEmojiBody(x, y, index, isDropped = false) {
         if (!gameActive || !engine) return;
         const item = MODES[currentMode].items[index];
-        const body = Bodies.circle(x, y, item.radius, {
+        const body = Matter.Bodies.circle(x, y, item.radius, {
             restitution: 0.2,
             friction: 0.2,
             render: {
@@ -400,14 +403,14 @@
         body.isProcessed = false;
         body.isDropped = isDropped;
         body.createdTime = Date.now();
-        Composite.add(engine.world, body);
+        Matter.Composite.add(engine.world, body);
         return body;
     }
 
     function createObstacleBody(x, y, isDropped = false) {
         if (!gameActive || !engine) return;
         const obs = MODES[currentMode].obamaItem;
-        const body = Bodies.circle(x, y, obs.radius, {
+        const body = Matter.Bodies.circle(x, y, obs.radius, {
             restitution: 0.4,
             friction: 0.2,
             render: {
@@ -419,7 +422,7 @@
         body.isObstacle = true;
         body.isDropped = isDropped;
         body.createdTime = Date.now();
-        Composite.add(engine.world, body);
+        Matter.Composite.add(engine.world, body);
         return body;
     }
 
@@ -499,7 +502,6 @@
         previewEl.style.left = `${x}px`;
     }
 
-    // --- ゲーム操作のイベント登録 (マウス＆タッチ両対応) ---
     container.addEventListener('mousedown', (e) => handlePointerStart(e.clientX));
     window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX));
     window.addEventListener('mouseup', () => handlePointerEnd());
@@ -515,18 +517,22 @@
         handlePointerEnd();
     });
 
-    // --- ボタンの確実なタッチ反応イベント登録 ---
+    // --- ボタンの確実なタッチ・クリック反応 ---
     function bindButton(id, callback) {
         const el = document.getElementById(id);
         if (!el) return;
+        
+        // タッチ開始時（touchstart）に即座に実行する（スマホでの遅延・不具合対策）
+        el.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            callback();
+        }, { passive: false });
+
         el.addEventListener('click', (e) => {
             e.preventDefault();
             callback();
         });
-        el.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            callback();
-        }, { passive: false });
     }
 
     bindButton('btn-office', () => startGame('office'));
@@ -539,7 +545,7 @@
 
     function generateResultCardText() {
         const modeName = MODES[currentMode].name;
-        const bodies = Composite.allBodies(engine.world);
+        const bodies = Matter.Composite.allBodies(engine.world);
         const counts = {};
         const items = MODES[currentMode].items;
         const maxIdx = items.length - 1;
@@ -579,7 +585,7 @@
         document.getElementById('final-score').innerText = score;
         document.getElementById('result-title').innerText = MODES[currentMode].text || "結果発表：";
 
-        const bodies = Composite.allBodies(engine.world);
+        const bodies = Matter.Composite.allBodies(engine.world);
         const counts = {};
         const items = MODES[currentMode].items;
         const maxIdx = items.length - 1;
@@ -587,7 +593,7 @@
         bodies.forEach(b => {
             if (b.emojiIndex !== undefined) {
                 const idx = b.emojiIndex;
-                counts[idx] = (counts[idx] => 0) + 1; // 修正
+                counts[idx] = (counts[idx] || 0) + 1;
             } else if (b.isObstacle) {
                 counts[maxIdx] = (counts[maxIdx] || 0) + 2;
             }
