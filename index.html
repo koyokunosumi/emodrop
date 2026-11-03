@@ -6,7 +6,7 @@
     <title>絵文字ドロップ！ (EMOJI DROP)</title>
 
     <meta property="og:title" content="絵文字ドロップ！ (EMOJI DROP)">
-    <meta property="og:description" content="同じ絵文字をくっつけて進化るブラウザパズルゲーム">
+    <meta property="og:description" content="同じ絵文字をくっつけて進化させよう！社畜モードと動物園モードが遊べるブラウザパズルゲーム！">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://koyokunosumi.github.io/emodrop/">
     <meta property="og:image" content="https://koyokunosumi.github.io/emodrop/thumbnail.png">
@@ -119,7 +119,7 @@
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
-            margin: 8px;
+            margin: 6px;
             box-shadow: 0 4px 10px rgba(255,87,34,0.4);
             transition: 0.2s;
             -webkit-tap-highlight-color: transparent;
@@ -139,17 +139,16 @@
             padding: 8px;
             border-radius: 8px;
             margin: 6px 0;
-            max-height: 120px;
+            max-height: 110px;
             overflow-y: auto;
             width: 100%;
         }
         .share-btn {
             background: #1da1f2;
             box-shadow: 0 4px 10px rgba(29,161,242,0.4);
-        }
-        .copy-btn {
-            background: #4caf50;
-            box-shadow: 0 4px 10px rgba(76,175,80,0.4);
+            width: 80%;
+            padding: 10px;
+            font-size: 15px;
         }
     </style>
 </head>
@@ -173,18 +172,15 @@
         </div>
 
         <div id="gameover-screen" class="screen hidden">
-            <h1 style="color: #ff5722; margin: 0 0 5px 0; font-size: 22px;">GAME OVER</h1>
-            <p style="margin: 2px 0; font-size: 14px;">スコア: <span id="final-score" style="font-weight:bold; font-size:18px;">0</span></p>
+            <h1 style="color: #ff5722; margin: 0 0 4px 0; font-size: 20px;">GAME OVER</h1>
+            <p style="margin: 2px 0; font-size: 13px;">スコア: <span id="final-score" style="font-weight:bold; font-size:17px;">0</span></p>
             <div class="result-box">
-                <p id="result-title" style="margin:0 0 3px 0; font-weight:bold; font-size:12px;"></p>
-                <div id="result-items" style="font-size: 18px; line-height: 1.3;"></div>
+                <p id="result-title" style="margin:0 0 3px 0; font-weight:bold; font-size:11px;"></p>
+                <div id="result-items" style="font-size: 17px; line-height: 1.3;"></div>
             </div>
-            <button id="btn-restart">🔄 もう一度遊ぶ</button>
-            <div style="display: flex; gap: 5px; justify-content: center; width: 100%;">
-                <button id="btn-share" class="share-btn" style="flex: 1; padding: 9px 5px; font-size: 13px;">🐦 Xでシェア</button>
-                <button id="btn-copy" class="copy-btn" style="flex: 1; padding: 9px 5px; font-size: 13px;">📋 カードコピー</button>
-            </div>
-            <button id="btn-title" style="background:#555; padding:6px 10px; font-size:11px; margin-top:5px;">タイトルに戻る</button>
+            <button id="btn-restart" style="padding: 10px 20px; font-size: 14px;">🔄 もう一度遊ぶ</button>
+            <button id="btn-share" class="share-btn">🐦 Xで結果をカードシェア</button>
+            <button id="btn-title" style="background:#555; padding:5px 12px; font-size:11px; margin-top:2px;">タイトルに戻る</button>
         </div>
     </div>
 
@@ -263,7 +259,6 @@
     }
 
     function startGame(modeKey) {
-        // 最初に確実に画面を隠す
         document.getElementById('title-screen').classList.add('hidden');
         document.getElementById('gameover-screen').classList.add('hidden');
 
@@ -517,18 +512,14 @@
         handlePointerEnd();
     });
 
-    // --- ボタンの確実なタッチ・クリック反応 ---
     function bindButton(id, callback) {
         const el = document.getElementById(id);
         if (!el) return;
-        
-        // タッチ開始時（touchstart）に即座に実行する（スマホでの遅延・不具合対策）
         el.addEventListener('touchstart', (e) => {
             e.preventDefault();
             e.stopPropagation();
             callback();
         }, { passive: false });
-
         el.addEventListener('click', (e) => {
             e.preventDefault();
             callback();
@@ -540,7 +531,6 @@
     bindButton('btn-giveup', () => triggerGameOver());
     bindButton('btn-restart', () => restartGame());
     bindButton('btn-share', () => shareToX());
-    bindButton('btn-copy', () => copyCardText());
     bindButton('btn-title', () => returnToTitle());
 
     function generateResultCardText() {
@@ -613,17 +603,16 @@
 
     function shareToX() {
         const cardText = generateResultCardText();
+        
+        // クリップボードにカードを自動コピーしつつ、Xのツイート画面を開く
+        navigator.clipboard.writeText(cardText).then(() => {
+            alert("リザルトカードをコピーしました！\nXの投稿画面で『ペースト(貼り付け)』してシェアしてね！");
+        }).catch(err => {
+            console.log("Clipboard copy failed, proceeding to tweet");
+        });
+
         const text = encodeURIComponent(cardText);
         window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-    }
-
-    function copyCardText() {
-        const cardText = generateResultCardText();
-        navigator.clipboard.writeText(cardText).then(() => {
-            alert("リザルトカードをコピーしました！");
-        }).catch(err => {
-            alert("コピーに失敗しました…");
-        });
     }
 </script>
 
