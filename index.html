@@ -75,7 +75,6 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            /* キャンバス上だけスクロールを禁止 */
             touch-action: none;
         }
         canvas {
@@ -106,7 +105,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 20; /* 確実に最前面にしてボタンを押しやすくする */
+            z-index: 20;
             text-align: center;
             padding: 15px;
             box-sizing: border-box;
@@ -129,6 +128,8 @@
             -webkit-tap-highlight-color: transparent;
             z-index: 25;
             position: relative;
+            /* タッチの邪魔をしないよう確実に設定 */
+            touch-action: manipulation;
         }
         button:active {
             transform: scale(0.95);
@@ -162,7 +163,7 @@
         <span id="current-mode-label">社畜</span>
         <span>スコア: <span id="score">0</span></span>
         <span>次: <span id="next-display" style="font-size:15px;">📌</span></span>
-        <button class="giveup-btn" onclick="triggerGameOver()">🏳️ ギブアップ</button>
+        <button id="btn-giveup" class="giveup-btn">🏳️ ギブアップ</button>
     </div>
 
     <div id="game-container">
@@ -171,8 +172,8 @@
         <div id="title-screen" class="screen">
             <h1>📦 絵文字ドロップ！</h1>
             <p style="font-size: 13px; margin-bottom: 20px;">同じ絵文字をくっつけて進化させよう！</p>
-            <button class="mode-btn" onclick="startGame('office')">🖨️ 社畜モード (オフィス)</button>
-            <button class="mode-btn" onclick="startGame('animal')">🦁 動物園モード (動物)</button>
+            <button id="btn-office" class="mode-btn">🖨️ 社畜モード (オフィス)</button>
+            <button id="btn-animal" class="mode-btn">🦁 動物園モード (動物)</button>
         </div>
 
         <div id="gameover-screen" class="screen hidden">
@@ -182,12 +183,12 @@
                 <p id="result-title" style="margin:0 0 3px 0; font-weight:bold; font-size:12px;"></p>
                 <div id="result-items" style="font-size: 18px; line-height: 1.3;"></div>
             </div>
-            <button onclick="restartGame()">🔄 もう一度遊ぶ</button>
+            <button id="btn-restart">🔄 もう一度遊ぶ</button>
             <div style="display: flex; gap: 5px; justify-content: center; width: 100%;">
-                <button class="share-btn" style="flex: 1; padding: 9px 5px; font-size: 13px;" onclick="shareToX()">🐦 Xでシェア</button>
-                <button class="copy-btn" style="flex: 1; padding: 9px 5px; font-size: 13px;" onclick="copyCardText()">📋 カードコピー</button>
+                <button id="btn-share" class="share-btn" style="flex: 1; padding: 9px 5px; font-size: 13px;">🐦 Xでシェア</button>
+                <button id="btn-copy" class="copy-btn" style="flex: 1; padding: 9px 5px; font-size: 13px;">📋 カードコピー</button>
             </div>
-            <button style="background:#555; padding:6px 10px; font-size:11px; margin-top:5px;" onclick="returnToTitle()">タイトルに戻る</button>
+            <button id="btn-title" style="background:#555; padding:6px 10px; font-size:11px; margin-top:5px;">タイトルに戻る</button>
         </div>
     </div>
 
@@ -498,6 +499,7 @@
         previewEl.style.left = `${x}px`;
     }
 
+    // --- ゲーム操作のイベント登録 (マウス＆タッチ両対応) ---
     container.addEventListener('mousedown', (e) => handlePointerStart(e.clientX));
     window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX));
     window.addEventListener('mouseup', () => handlePointerEnd());
@@ -512,6 +514,28 @@
     window.addEventListener('touchend', () => {
         handlePointerEnd();
     });
+
+    // --- ボタンの確実なタッチ反応イベント登録 ---
+    function bindButton(id, callback) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            callback();
+        });
+        el.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            callback();
+        }, { passive: false });
+    }
+
+    bindButton('btn-office', () => startGame('office'));
+    bindButton('btn-animal', () => startGame('animal'));
+    bindButton('btn-giveup', () => triggerGameOver());
+    bindButton('btn-restart', () => restartGame());
+    bindButton('btn-share', () => shareToX());
+    bindButton('btn-copy', () => copyCardText());
+    bindButton('btn-title', () => returnToTitle());
 
     function generateResultCardText() {
         const modeName = MODES[currentMode].name;
@@ -563,7 +587,7 @@
         bodies.forEach(b => {
             if (b.emojiIndex !== undefined) {
                 const idx = b.emojiIndex;
-                counts[idx] = (counts[idx] || 0) + 1;
+                counts[idx] = (counts[idx] => 0) + 1; // 修正
             } else if (b.isObstacle) {
                 counts[maxIdx] = (counts[maxIdx] || 0) + 2;
             }
