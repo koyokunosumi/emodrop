@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>絵文字ドロップ！ (EMOJI DROP)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        h1 {
+            margin: 5px 0;
+            font-size: 20px;
+        }
+        #header-info {
+            width: 360px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            background: #2a2a2a;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 2px solid #444;
+            box-sizing: border-box;
+        }
+        .giveup-btn {
+            background: #555;
+            color: #fff;
+            border: none;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .giveup-btn:hover {
+            background: #d32f2f;
+        }
+        #game-container {
+            position: relative;
+            width: 360px;
+            height: 500px;
+            background: #2a2a2a;
+            border: 4px solid #444;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            touch-action: none;
+        }
+        #drop-preview {
+            position: absolute;
+            top: 20px;
+            transform: translateX(-50%);
+            pointer-events: none;
+            display: none;
+            z-index: 5;
+            text-align: center;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .hidden {
+            display: none !important;
+        }
+        button {
+            background: #ff5722;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            margin: 8px;
+            box-shadow: 0 4px 10px rgba(255,87,34,0.4);
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #f4511e;
+            transform: scale(1.05);
+        }
+        .mode-btn {
+            background: #3f51b5;
+            box-shadow: 0 4px 10px rgba(63,81,181,0.4);
+        }
+        .mode-btn:hover {
+            background: #303f9f;
+        }
+        .result-box {
+            background: #333;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            max-height: 150px;
+            overflow-y: auto;
+            width: 100%;
+        }
+        .share-btn {
+            background: #1da1f2;
+            box-shadow: 0 4px 10px rgba(29,161,242,0.4);
+        }
+        .share-btn:hover {
+            background: #0c85d0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header-info">
+        <span id="current-mode-label">社畜</span>
+        <span>スコア: <span id="score">0</span></span>
+        <span>次: <span id="next-display" style="font-size:16px;">📌</span></span>
+        <button class="giveup-btn" onclick="triggerGameOver()">🏳️ ギブアップ</button>
+    </div>
+
+    <div id="game-container">
+        <div id="drop-preview">📌</div>
+
+        <div id="title-screen" class="screen">
+            <h1>📦 絵文字ドロップ！</h1>
+            <p style="font-size: 14px; margin-bottom: 20px;">同じ絵文字をくっつけて進化させよう！</p>
+            <button class="mode-btn" onclick="startGame('office')">🖨️ 社畜モード (オフィス)</button>
+            <button class="mode-btn" onclick="startGame('animal')">🦁 動物園モード (動物)</button>
+        </div>
+
+        <div id="gameover-screen" class="screen hidden">
+            <h1 style="color: #ff5722; margin: 0 0 10px 0;">GAME OVER</h1>
+            <p style="margin: 5px 0;">スコア: <span id="final-score" style="font-weight:bold; font-size:20px;">0</span></p>
+            <div class="result-box">
+                <p id="result-title" style="margin:0 0 5px 0; font-weight:bold; font-size:14px;"></p>
+                <div id="result-items" style="font-size: 22px; line-height: 1.4;"></div>
+            </div>
+            <button onclick="restartGame()">🔄 もう一度遊ぶ</button>
+            <button class="share-btn" onclick="shareToX()">🐦 Xで結果をシェア</button>
+            <button style="background:#555; padding:6px 14px; font-size:12px;" onclick="returnToTitle()">タイトルに戻る</button>
+        </div>
+    </div>
+
+<script>
+    const MODES = {
+        office: {
+            name: "社畜",
+            titleText: "☕ 今日のあなたのオフィスデスク：",
+            items: [
+                { emoji: '📌', radius: 15, score: 2 },
+                { emoji: '✏️', radius: 22, score: 4 },
+                { emoji: '✂️', radius: 30, score: 8 },
+                { emoji: '📏', radius: 38, score: 16 },
+                { emoji: '🔋', radius: 46, score: 32 },
+                { emoji: '💾', radius: 54, score: 64 },
+                { emoji: '☕', radius: 62, score: 128 },
+                { emoji: '💻', radius: 72, score: 256 },
+                { emoji: '🖨️', radius: 82, score: 512 } // 最大
+            ],
+            obamaItem: { emoji: '💥', radius: 50, score: 0, isObstacle: true }
+        },
+        animal: {
+            name: "動物園",
+            titleText: "🌴 今日のあなたの動物園：",
+            items: [
+                { emoji: '🐜', radius: 15, score: 2 },
+                { emoji: '🐛', radius: 22, score: 4 },
+                { emoji: '🐌', radius: 30, score: 8 },
+                { emoji: '🐸', radius: 38, score: 16 },
+                { emoji: '🐰', radius: 46, score: 32 },
+                { emoji: '🐱', radius: 54, score: 64 },
+                { emoji: '🐶', radius: 62, score: 128 },
+                { emoji: '🦁', radius: 72, score: 256 },
+                { emoji: '🐘', radius: 82, score: 512 } // 最大
+            ],
+            obamaItem: { emoji: '💩', radius: 50, score: 0, isObstacle: true }
+        }
+    };
+
+    let currentMode = 'office';
+    let score = 0;
+    let gameActive = false;
+    let currentEmojiIndex = 0;
+    let nextEmojiIndex = 0;
+    let isDragging = false;
+    let canDrop = true;
+    let dropX = 180;
+
+    const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
+    let engine, render, runner;
+    const container = document.getElementById('game-container');
+    const previewEl = document.getElementById('drop-preview');
+    const WIDTH = 360;
+    const HEIGHT = 500;
+    const DEAD_LINE = 65;
+
+    function cleanupPhysics() {
+        if (render) {
+            Render.stop(render);
+            if (render.canvas) render.canvas.remove();
+            render.canvas = null;
+            render.context = null;
+            render.textures = {};
+        }
+        if (runner) Runner.stop(runner);
+        if (engine) {
+            Composite.clear(engine.world, false);
+            Engine.clear(engine);
+        }
+        engine = null;
+        render = null;
+        runner = null;
+    }
+
+    function startGame(modeKey) {
+        cleanupPhysics();
+        currentMode = modeKey;
+        document.getElementById('title-screen').classList.add('hidden');
+        document.getElementById('gameover-screen').classList.add('hidden');
+        document.getElementById('current-mode-label').innerText = MODES[modeKey].name;
+        
+        score = 0;
+        document.getElementById('score').innerText = score;
+        canDrop = true;
+        
+        initPhysics();
+        gameActive = true;
+        spawnNext();
+    }
+
+    function returnToTitle() {
+        gameActive = false;
+        cleanupPhysics();
+        previewEl.style.display = 'none';
+
+        document.getElementById('gameover-screen').classList.add('hidden');
+        document.getElementById('title-screen').classList.remove('hidden');
+    }
+
+    function restartGame() {
+        startGame(currentMode);
+    }
+
+    function initPhysics() {
+        engine = Engine.create();
+        render = Render.create({
+            element: container,
+            engine: engine,
+            options: {
+                width: WIDTH,
+                height: HEIGHT,
+                wireframes: false,
+                background: '#2a2a2a'
+            }
+        });
+
+        Events.on(render, 'afterRender', () => {
+            if (!render || !render.context) return;
+            const ctx = render.context;
+            ctx.beginPath();
+            ctx.moveTo(0, DEAD_LINE);
+            ctx.lineTo(WIDTH, DEAD_LINE);
+            ctx.strokeStyle = '#ff5722';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        });
+
+        Render.run(render);
+        runner = Runner.create();
+        Runner.run(runner, engine);
+
+        const wallOptions = { isStatic: true, render: { fillStyle: '#444' } };
+        const ground = Bodies.rectangle(WIDTH / 2, HEIGHT + 25, WIDTH, 50, wallOptions);
+        const leftWall = Bodies.rectangle(-25, HEIGHT / 2, 50, HEIGHT, wallOptions);
+        const rightWall = Bodies.rectangle(WIDTH + 25, HEIGHT / 2, 50, HEIGHT, wallOptions);
+
+        Composite.add(engine.world, [ground, leftWall, rightWall]);
+
+        Events.on(engine, 'collisionStart', (event) => {
+            if (!gameActive) return;
+            const pairs = event.pairs;
+            for (let i = 0; i < pairs.length; i++) {
+                const bodyA = pairs[i].bodyA;
+                const bodyB = pairs[i].bodyB;
+
+                if (bodyA.isObstacle || bodyB.isObstacle) continue;
+
+                if (bodyA.emojiIndex !== undefined && bodyB.emojiIndex !== undefined) {
+                    if (bodyA.emojiIndex === bodyB.emojiIndex && !bodyA.isProcessed && !bodyB.isProcessed) {
+                        bodyA.isProcessed = true;
+                        bodyB.isProcessed = true;
+
+                        const idx = bodyA.emojiIndex;
+                        const items = MODES[currentMode].items;
+                        const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                        const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+                        Composite.remove(engine.world, [bodyA, bodyB]);
+
+                        if (idx < items.length - 1) {
+                            score += items[idx].score;
+                            document.getElementById('score').innerText = score;
+                            createEmojiBody(midX, midY, idx + 1, true);
+                        } else {
+                            score += items[idx].score * 2;
+                            document.getElementById('score').innerText = score;
+                            createObstacleBody(midX, midY, true);
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+
+        Events.on(engine, 'afterUpdate', () => {
+            if (!gameActive) return;
+            const bodies = Composite.allBodies(engine.world);
+            const now = Date.now();
+            
+            for (let i = 0; i < bodies.length; i++) {
+                const b = bodies[i];
+                if ((b.emojiIndex !== undefined || b.isObstacle) && !b.isStatic && b.isDropped) {
+                    if (now - b.createdTime > 1500) {
+                        if (b.position.y < DEAD_LINE && Math.abs(b.velocity.y) < 0.5) {
+                            triggerGameOver();
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createEmojiBody(x, y, index, isDropped = false) {
+        if (!gameActive || !engine) return;
+        const item = MODES[currentMode].items[index];
+        const body = Bodies.circle(x, y, item.radius, {
+            restitution: 0.2,
+            friction: 0.2,
+            render: {
+                sprite: {
+                    texture: createCleanEmojiTexture(item.emoji, item.radius)
+                }
+            }
+        });
+        body.emojiIndex = index;
+        body.isProcessed = false;
+        body.isDropped = isDropped;
+        body.createdTime = Date.now();
+        Composite.add(engine.world, body);
+        return body;
+    }
+
+    function createObstacleBody(x, y, isDropped = false) {
+        if (!gameActive || !engine) return;
+        const obs = MODES[currentMode].obamaItem;
+        const body = Bodies.circle(x, y, obs.radius, {
+            restitution: 0.4,
+            friction: 0.2,
+            render: {
+                sprite: {
+                    texture: createCleanEmojiTexture(obs.emoji, obs.radius)
+                }
+            }
+        });
+        body.isObstacle = true;
+        body.isDropped = isDropped;
+        body.createdTime = Date.now();
+        Composite.add(engine.world, body);
+        return body;
+    }
+
+    function createCleanEmojiTexture(emoji, radius) {
+        const size = radius * 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        ctx.beginPath();
+        ctx.arc(radius, radius, radius - 1, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = `${size * 0.75}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(emoji, radius, radius);
+
+        return canvas.toDataURL();
+    }
+
+    function spawnNext() {
+        if (!gameActive) return;
+        currentEmojiIndex = nextEmojiIndex;
+        nextEmojiIndex = Math.floor(Math.random() * 3);
+        
+        const items = MODES[currentMode].items;
+        const currentItem = items[currentEmojiIndex];
+
+        const diameter = currentItem.radius * 2;
+        previewEl.style.width = `${diameter}px`;
+        previewEl.style.height = `${diameter}px`;
+        previewEl.style.fontSize = `${diameter * 0.75}px`;
+        previewEl.innerText = currentItem.emoji;
+
+        document.getElementById('next-display').innerText = items[nextEmojiIndex].emoji;
+        previewEl.style.display = 'flex';
+        canDrop = true;
+    }
+
+    function handlePointerStart(clientX) {
+        if (!gameActive || !canDrop) return;
+        isDragging = true;
+        updateDropPosition(clientX);
+    }
+
+    function handlePointerMove(clientX) {
+        if (!gameActive || !isDragging || !canDrop) return;
+        updateDropPosition(clientX);
+    }
+
+    function handlePointerEnd() {
+        if (!gameActive || !isDragging || !canDrop) return;
+        isDragging = false;
+        canDrop = false;
+        previewEl.style.display = 'none';
+
+        createEmojiBody(dropX, 40, currentEmojiIndex, true);
+
+        setTimeout(() => {
+            if (gameActive) spawnNext();
+        }, 600);
+    }
+
+    function updateDropPosition(clientX) {
+        const rect = container.getBoundingClientRect();
+        let x = clientX - rect.left;
+        const radius = MODES[currentMode].items[currentEmojiIndex].radius;
+        
+        if (x < radius) x = radius;
+        if (x > WIDTH - radius) x = WIDTH - radius;
+        
+        dropX = x;
+        previewEl.style.left = `${x}px`;
+    }
+
+    container.addEventListener('mousedown', (e) => handlePointerStart(e.clientX));
+    window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX));
+    window.addEventListener('mouseup', () => handlePointerEnd());
+
+    container.addEventListener('touchstart', (e) => {
+        handlePointerStart(e.touches[0].clientX);
+        e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchmove', (e) => {
+        handlePointerMove(e.touches[0].clientX);
+    }, { passive: false });
+    window.addEventListener('touchend', () => {
+        handlePointerEnd();
+    });
+
+    function triggerGameOver() {
+        if (!gameActive) return;
+        gameActive = false;
+        isDragging = false;
+        previewEl.style.display = 'none';
+
+        document.getElementById('final-score').innerText = score;
+        document.getElementById('result-title').innerText = MODES[currentMode].titleText;
+
+        const bodies = Composite.allBodies(engine.world);
+        const counts = {};
+        const items = MODES[currentMode].items;
+        const maxIdx = items.length - 1;
+
+        bodies.forEach(b => {
+            if (b.emojiIndex !== undefined) {
+                const idx = b.emojiIndex;
+                counts[idx] = (counts[idx] || 0) + 1;
+            } else if (b.isObstacle) {
+                counts[maxIdx] = (counts[maxIdx] || 0) + 2;
+            }
+        });
+
+        let resultHTML = '';
+        for (let i = items.length - 1; i >= 0; i--) {
+            if (counts[i]) {
+                resultHTML += `[ ${items[i].emoji} × ${counts[i]} ] `;
+            }
+        }
+        if (resultHTML === '') resultHTML = 'きれいさっぱり何もない…？';
+        document.getElementById('result-items').innerHTML = resultHTML;
+
+        document.getElementById('gameover-screen').classList.remove('hidden');
+    }
+
+    function shareToX() {
+        const modeName = MODES[currentMode].name;
+        const text = encodeURIComponent(`【絵文字ドロップ (${modeName}モード)】\nスコア: ${score}点でした！\n#絵文字スイカゲーム #EMOJIDROP`);
+        window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+    }
+</script>
+
+</body>
+</html>
