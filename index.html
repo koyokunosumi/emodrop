@@ -12,7 +12,8 @@
     <meta property="og:image" content="https://koyokunosumi.github.io/emodrop/thumbnail.png">
     <meta name="twitter:card" content="summary_large_image">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <!-- 確実なCDNからMatter.jsを読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js?v=2024"></script>
     <style>
         html, body {
             margin: 0;
@@ -139,7 +140,7 @@
             box-sizing: border-box;
         }
 
-        /* リザルト画面のボタン群（確実に表示される独立デザイン） */
+        /* リザルト画面のボタン群 */
         .result-btn {
             display: block;
             width: 80%;
@@ -194,7 +195,7 @@
             <button id="btn-animal" class="mode-btn">🦁 動物園モード (動物)</button>
         </div>
 
-        <!-- ▼▼▼ ゲームオーバー画面（シェアボタンを確実に配置） ▼▼▼ -->
+        <!-- ゲームオーバー画面 -->
         <div id="gameover-screen" class="screen hidden">
             <h1 style="color: #ff5722; margin: 0 0 2px 0; font-size: 18px;">GAME OVER</h1>
             <p style="margin: 2px 0; font-size: 12px;">スコア: <span id="final-score" style="font-weight:bold; font-size:16px;">0</span></p>
@@ -203,12 +204,11 @@
                 <div id="result-items" style="font-size: 15px; line-height: 1.2;"></div>
             </div>
             
-            <!-- リザルトボタン3種（もう一度遊ぶ・シェア・タイトル） -->
+            <!-- ボタン3種 -->
             <button id="btn-restart" class="result-btn restart-btn">🔄 もう一度遊ぶ</button>
             <button id="btn-share" class="result-btn share-btn">🐦 Xで結果をシェア</button>
             <button id="btn-title" class="result-btn title-back-btn">タイトルに戻る</button>
         </div>
-        <!-- ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ -->
     </div>
 
 <script>
@@ -553,6 +553,17 @@
         });
     }
 
+    // シェアボタン専用のバインド（スマホのポップアップブロック対策）
+    function bindShareButton(id, callback) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('touchstart', (e) => { e.stopPropagation(); }, { passive: true });
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            callback();
+        });
+    }
+
     bindButton('btn-office', () => startGame('office'));
     bindButton('btn-animal', () => startGame('animal'));
     bindButton('btn-giveup', () => triggerGameOver());
@@ -560,7 +571,7 @@
     bindButton('btn-title', () => returnToTitle());
     
     // シェアボタンのイベント登録
-    bindButton('btn-share', () => {
+    bindShareButton('btn-share', () => {
         const modeName = MODES[currentMode].name;
         const bodies = Matter.Composite.allBodies(engine.world);
         const counts = {};
@@ -586,7 +597,10 @@
 
         const tweetText = `【絵文字ドロップ (${modeName}モード)】\nスコア: ${score}点でした！\n成果: ${itemsStr}\n#絵文字ドロップ #EMOJIDROP`;
         const encodedText = encodeURIComponent(tweetText);
-        window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
+        const shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}`;
+        
+        const w = window.open(shareUrl, '_blank');
+        if (!w) window.location.href = shareUrl;
     });
 
     function triggerGameOver() {
