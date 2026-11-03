@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>絵文字ドロップ (EMOJI DROP)</title>
+    <title>絵文字ドロップ！(EMOJI DROP)</title>
 
     <meta property="og:title" content="絵文字ドロップ (EMOJI DROP)">
     <meta property="og:description" content="同じ絵文字をくっつけて進化させるブラウザパズルゲーム">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://koyokunosumi.github.io/emodrop/">
     <meta property="og:image" content="https://koyokunosumi.github.io/emodrop/thumbnail.png">
+
     <meta name="twitter:card" content="summary_large_image">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
@@ -155,7 +156,7 @@
 <body>
 
     <div id="header-info">
-        <span id="current-mode-label">会社</span>
+        <span id="current-mode-label">社畜</span>
         <span>スコア: <span id="score">0</span></span>
         <span>次: <span id="next-display" style="font-size:15px;">📌</span></span>
         <button id="btn-giveup" class="giveup-btn">🏳️ ギブアップ</button>
@@ -165,13 +166,13 @@
         <div id="drop-preview">📌</div>
 
         <div id="title-screen" class="screen">
-            <h1>📦 絵文字ドロップ</h1>
+            <h1>📦 絵文字ドロップ！</h1>
             <p style="font-size: 13px; margin-bottom: 20px;">同じ絵文字をくっつけて進化させよう</p>
             <button id="btn-office" class="mode-btn">🖨️ 会社モード (オフィス)</button>
             <button id="btn-animal" class="mode-btn">🦁 動物園モード (動物)</button>
         </div>
 
-         <div id="gameover-screen" class="screen hidden">
+        <div id="gameover-screen" class="screen hidden">
             <h1 style="color: #ff5722; margin: 0 0 4px 0; font-size: 20px;">GAME OVER</h1>
             <p style="margin: 2px 0; font-size: 13px;">スコア: <span id="final-score" style="font-weight:bold; font-size:17px;">0</span></p>
             <div class="result-box">
@@ -187,7 +188,7 @@
 <script>
     const MODES = {
         office: {
-            name: "社畜",
+            name: "会社",
             titleText: "☕ 今日のあなたのオフィスデスク：",
             items: [
                 { emoji: '📌', radius: 14, score: 2 },
