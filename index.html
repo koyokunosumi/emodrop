@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>絵文字ドロップ (EMOJI DROP)</title>
 
-    <meta property="og:title" content="絵文字ドロップ！ (EMOJI DROP)">
+    <meta property="og:title" content="絵文字ドロップ (EMOJI DROP)">
     <meta property="og:description" content="同じ絵文字をくっつけて進化さるブラウザパズルゲーム">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://koyokunosumi.github.io/emodrop/">
@@ -50,6 +50,7 @@
             box-sizing: border-box;
             z-index: 2;
         }
+        /* 上部のギブアップボタン専用スタイル（コンパクトに維持） */
         .giveup-btn {
             background: #555;
             color: #fff;
@@ -59,10 +60,13 @@
             border-radius: 4px;
             cursor: pointer;
             transition: 0.2s;
+            width: auto;
+            box-shadow: none;
         }
         .giveup-btn:hover {
             background: #d32f2f;
         }
+
         #game-container {
             position: relative;
             width: 340px;
@@ -110,59 +114,71 @@
         .hidden {
             display: none !important;
         }
-        /* 共通ボタン・リンクボタンスタイル */
-        button, a.action-btn {
-            background: #ff5722;
+
+        /* タイトル画面のモード選択ボタン */
+        .mode-btn {
+            background: #3f51b5;
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 14px;
+            padding: 12px 24px;
+            font-size: 15px;
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
-            margin: 5px 0;
-            box-shadow: 0 4px 10px rgba(255,87,34,0.4);
+            margin: 8px;
+            box-shadow: 0 4px 10px rgba(63,81,181,0.4);
             transition: 0.2s;
             -webkit-tap-highlight-color: transparent;
             z-index: 25;
-            position: relative;
             touch-action: manipulation;
-            text-decoration: none;
-            display: inline-block;
-            box-sizing: border-box;
-            width: 80%;
-            text-align: center;
         }
-        button:active, a.action-btn:active {
-            transform: scale(0.95);
-        }
-        .mode-btn {
-            background: #3f51b5;
-            box-shadow: 0 4px 10px rgba(63,81,181,0.4);
-            width: auto;
-            padding: 12px 24px;
-            font-size: 15px;
-        }
+
+        /* リザルト画面のコンテナとボックス */
         .result-box {
             background: #333;
-            padding: 8px;
+            padding: 6px;
             border-radius: 8px;
-            margin: 6px 0;
-            max-height: 100px;
+            margin: 4px 0;
+            max-height: 90px;
             overflow-y: auto;
             width: 100%;
+            box-sizing: border-box;
         }
-        .share-btn {
-            background: #1da1f2 !important;
-            box-shadow: 0 4px 10px rgba(29,161,242,0.4) !important;
+
+        /* リザルト画面の専用ボタン群（確実に表示させるスタイル） */
+        .result-btn {
+            display: block;
+            width: 85%;
+            margin: 5px auto;
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            text-decoration: none;
+            box-sizing: border-box;
+            transition: 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            z-index: 25;
+            touch-action: manipulation;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .result-btn:active {
+            transform: scale(0.95);
         }
         .restart-btn {
-            background: #ff5722 !important;
+            background: #ff5722;
+        }
+        .share-btn {
+            background: #1da1f2;
         }
         .title-back-btn {
-            background: #555 !important;
+            background: #555;
             width: auto !important;
-            padding: 6px 14px !important;
+            padding: 5px 12px !important;
             font-size: 11px !important;
             margin-top: 4px !important;
         }
@@ -171,7 +187,7 @@
 <body>
 
     <div id="header-info">
-        <span id="current-mode-label">社畜</span>
+        <span id="current-mode-label"></span>
         <span>スコア: <span id="score">0</span></span>
         <span>次: <span id="next-display" style="font-size:15px;">📌</span></span>
         <button id="btn-giveup" class="giveup-btn">🏳️ ギブアップ</button>
@@ -182,23 +198,23 @@
 
         <div id="title-screen" class="screen">
             <h1>📦 絵文字ドロップ</h1>
-            <p style="font-size: 13px; margin-bottom: 20px;">同じ絵文字をくっつけて進化させよう</p>
+            <p style="font-size: 13px; margin-bottom: 20px;">同じ絵文字をくっつけて進化</p>
             <button id="btn-office" class="mode-btn">🖨️ 会社モード (オフィス)</button>
             <button id="btn-animal" class="mode-btn">🦁 動物園モード (動物)</button>
         </div>
 
         <div id="gameover-screen" class="screen hidden">
-            <h1 style="color: #ff5722; margin: 0 0 4px 0; font-size: 20px;">GAME OVER</h1>
+            <h1 style="color: #ff5722; margin: 0 0 2px 0; font-size: 19px;">GAME OVER</h1>
             <p style="margin: 2px 0; font-size: 13px;">スコア: <span id="final-score" style="font-weight:bold; font-size:17px;">0</span></p>
             <div class="result-box">
-                <p id="result-title" style="margin:0 0 3px 0; font-weight:bold; font-size:11px;"></p>
-                <div id="result-items" style="font-size: 17px; line-height: 1.3;"></div>
+                <p id="result-title" style="margin:0 0 2px 0; font-weight:bold; font-size:11px;"></p>
+                <div id="result-items" style="font-size: 16px; line-height: 1.2;"></div>
             </div>
             
-            <!-- リザルト画面のボタン群 -->
-            <button id="btn-restart" class="action-btn restart-btn">🔄 もう一度遊ぶ</button>
-            <a id="btn-share" class="action-btn share-btn" href="#" target="_blank">🐦 Xで結果をシェア</a>
-            <button id="btn-title" class="action-btn title-back-btn">タイトルに戻る</button>
+            <!-- リザルト画面専用の綺麗に並ぶボタン群 -->
+            <button id="btn-restart" class="result-btn restart-btn">🔄 もう一度遊ぶ</button>
+            <a id="btn-share" class="result-btn share-btn" href="#" target="_blank">🐦 Xで結果をシェア</a>
+            <button id="btn-title" class="result-btn title-back-btn">タイトルに戻る</button>
         </div>
     </div>
 
