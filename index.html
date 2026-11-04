@@ -12,7 +12,6 @@
     <meta property="og:image" content="https://koyokunosumi.github.io/emodrop/thumbnail.png">
     <meta name="twitter:card" content="summary_large_image">
 
-    <!-- 確実なCDNからMatter.jsを読み込み -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js?v=2024"></script>
     <style>
         html, body {
@@ -20,6 +19,7 @@
             padding: 0;
             width: 100%;
             height: 100%;
+            height: 100dvh;
             overflow: hidden;
             background: #1a1a1a;
             color: #fff;
@@ -109,7 +109,6 @@
             text-align: center;
             padding: 10px;
             box-sizing: border-box;
-            overflow-y: auto;
         }
         .hidden {
             display: none !important;
@@ -129,24 +128,33 @@
             touch-action: manipulation;
         }
 
+        /* ゲームオーバー画面専用：スマホでも確実に収まる＆描画バグを防ぐ構造 */
+        #gameover-screen {
+            justify-content: space-evenly !important;
+            padding: 10px !important;
+            overflow: hidden !important;
+        }
+
         .result-box {
             background: #333;
-            padding: 4px 8px;
-            border-radius: 8px;
-            margin: 4px 0;
-            max-height: 75px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin: 2px 0;
+            max-height: 60px;
             overflow-y: auto;
             width: 100%;
             box-sizing: border-box;
         }
 
-        /* リザルト画面のボタン群 */
+        /* リザルト画面のボタン群（スマホでの描画抜けを防ぐための絶対スタイル） */
         .result-btn {
-            display: block;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
             width: 80%;
-            margin: 4px auto;
-            padding: 9px 12px;
-            font-size: 14px;
+            margin: 3px auto;
+            padding: 8px 10px;
+            font-size: 13px;
             font-weight: bold;
             color: white;
             border: none;
@@ -154,7 +162,7 @@
             cursor: pointer;
             box-sizing: border-box;
             touch-action: manipulation;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
             text-align: center;
             z-index: 25;
         }
@@ -165,14 +173,14 @@
             background: #ff5722;
         }
         .share-btn {
-            background: #1da1f2;
+            background: #1da1f2 !important;
         }
         .title-back-btn {
             background: #555;
             width: auto !important;
-            padding: 5px 12px !important;
+            padding: 4px 10px !important;
             font-size: 11px !important;
-            margin-top: 4px !important;
+            margin-top: 2px !important;
         }
     </style>
 </head>
@@ -197,11 +205,11 @@
 
         <!-- ゲームオーバー画面 -->
         <div id="gameover-screen" class="screen hidden">
-            <h1 style="color: #ff5722; margin: 0 0 2px 0; font-size: 18px;">GAME OVER</h1>
-            <p style="margin: 2px 0; font-size: 12px;">スコア: <span id="final-score" style="font-weight:bold; font-size:16px;">0</span></p>
+            <h1 style="color: #ff5722; margin: 0; font-size: 16px;">GAME OVER</h1>
+            <p style="margin: 2px 0; font-size: 12px;">スコア: <span id="final-score" style="font-weight:bold; font-size:15px;">0</span></p>
             <div class="result-box">
-                <p id="result-title" style="margin:0 0 2px 0; font-weight:bold; font-size:11px;"></p>
-                <div id="result-items" style="font-size: 15px; line-height: 1.2;"></div>
+                <p id="result-title" style="margin:0 0 2px 0; font-weight:bold; font-size:10px;"></p>
+                <div id="result-items" style="font-size: 14px; line-height: 1.2;"></div>
             </div>
             
             <!-- ボタン3種 -->
@@ -553,15 +561,21 @@
         });
     }
 
-    // シェアボタン専用のバインド（スマホのポップアップブロック対策）
     function bindShareButton(id, callback) {
         const el = document.getElementById(id);
         if (!el) return;
-        el.addEventListener('touchstart', (e) => { e.stopPropagation(); }, { passive: true });
-        el.addEventListener('click', (e) => {
+        let lastFire = 0;
+        const fire = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            const now = Date.now();
+            if (now - lastFire < 600) return;
+            lastFire = now;
             callback();
-        });
+        };
+        el.addEventListener('touchstart', (e) => { e.stopPropagation(); }, { passive: true });
+        el.addEventListener('touchend', fire, { passive: false });
+        el.addEventListener('click', fire);
     }
 
     bindButton('btn-office', () => startGame('office'));
@@ -570,7 +584,6 @@
     bindButton('btn-restart', () => restartGame());
     bindButton('btn-title', () => returnToTitle());
     
-    // シェアボタンのイベント登録
     bindShareButton('btn-share', () => {
         const modeName = MODES[currentMode].name;
         const bodies = Matter.Composite.allBodies(engine.world);
@@ -597,10 +610,16 @@
 
         const tweetText = `【絵文字ドロップ (${modeName}モード)】\nスコア: ${score}点でした！\n成果: ${itemsStr}\n#絵文字ドロップ #EMOJIDROP`;
         const encodedText = encodeURIComponent(tweetText);
-        const shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}`;
-        
-        const w = window.open(shareUrl, '_blank');
-        if (!w) window.location.href = shareUrl;
+        const gameUrl = encodeURIComponent('https://koyokunosumi.github.io/emodrop/');
+        const shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${gameUrl}`;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            // スマホ(アプリ内ブラウザ含む)ではポップアップがブロックされやすいので同一タブで遷移
+            window.location.href = shareUrl;
+        } else {
+            const w = window.open(shareUrl, '_blank');
+            if (!w) window.location.href = shareUrl;
+        }
     });
 
     function triggerGameOver() {
